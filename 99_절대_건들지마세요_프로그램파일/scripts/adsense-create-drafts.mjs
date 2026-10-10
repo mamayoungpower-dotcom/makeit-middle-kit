@@ -4,7 +4,7 @@ import {createHash} from "node:crypto";
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
-import {readTitleEntries, resolveTitleFile} from "./title-files.mjs";
+import {orderTitleEntriesBySubcategoryRoundRobin, readTitleEntries, resolveTitleFile} from "./title-files.mjs";
 import {keysGuideMessage, requireLicense} from "./lib/env.mjs";
 import {wpFetch} from "./lib/wp.mjs";
 import {돈줄, 예산상태, 원장기록, 진행표시, 천단위, 퍼센트, 퍼센트문구} from "./lib/usage.mjs";
@@ -1686,9 +1686,10 @@ const usedTitleKeys = new Set([
   ...previousDraftHistory.map((entry) => titleKey(entry.title)),
   ...existingOnWordPress.titles.map((title) => titleKey(title)),
 ]);
-const availableTitleEntries = includeUsedTitles
+const availableTitleEntriesInFileOrder = includeUsedTitles
   ? allTitleEntries
   : allTitleEntries.filter((entry) => !usedTitleKeys.has(titleKey(entry.title)));
+const availableTitleEntries = orderTitleEntriesBySubcategoryRoundRobin(availableTitleEntriesInFileOrder);
 const titleEntries = limit > 0 ? availableTitleEntries.slice(0, limit) : availableTitleEntries;
 const titles = titleEntries.map((entry) => entry.title);
 if (titles.length === 0) {
@@ -1723,6 +1724,7 @@ if (limit > 0) {
 if (titleCatalog.categories.length > 0) {
   console.log(`제목 파일 카테고리 매핑: 대표 ${titleCatalog.categories.length}개 / 세부 ${titleCatalog.categories.reduce((sum, category) => sum + category.children.length, 0)}개`);
 }
+if (titleCatalog.categories.length > 0) console.log("제목 선택 순서: 세부카테고리별 1개씩 순환");
 if (titleCatalog.warnings.length > 0) {
   console.log("제목 파일 점검 경고:");
   titleCatalog.warnings.forEach((warning) => console.log(`- ${warning}`));
