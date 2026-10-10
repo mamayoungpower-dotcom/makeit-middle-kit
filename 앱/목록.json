@@ -1,8 +1,8 @@
 {
-  "버전": "2026-10-10-subcategory-time-rotation",
+  "버전": "2026-10-10-subcategory-time-rotation-r2",
   "정지": false,
   "정지안내": "",
-  "커밋": "7b7ec0a84ae996e528749675c9f525ad85448621",
+  "커밋": "dcde83902aca0a87037abc6ddca733ac82a804e8",
   "파일": [
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-auto-drafts.mjs",
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-create-drafts.mjs",
