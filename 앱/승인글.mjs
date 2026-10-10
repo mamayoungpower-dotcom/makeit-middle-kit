@@ -15,7 +15,7 @@ import {fileURLToPath} from "node:url";
 import {Worker} from "node:worker_threads";
 import {homedir} from "node:os";
 
-export const 버전 = "2026-10-10-subcategory-time-rotation-r2";
+export const 버전 = "2026-10-11-terra";
 
 const 여기 = dirname(fileURLToPath(import.meta.url));            // <임시>/앱
 const 프로그램폴더 = join(여기, "..", "99_절대_건들지마세요_프로그램파일");
@@ -198,6 +198,7 @@ function 환경변수(작업폴더, 설정) {
     OPENAI_API_KEY: 설정.openai키 || "",
     OPENAI_BUDGET_USD: 설정.충전달러 > 0 ? String(설정.충전달러) : "",
     OPENAI_BUDGET_SET_AT: 설정.충전시각 || "",
+    ARTICLE_MODEL: "gpt-5.6-terra",
   };
   (설정.사이트 || []).forEach((s, i) => {
     const 번호 = String(s.번호 || i + 1).padStart(2, "0");
