@@ -460,47 +460,39 @@ function applyTimeOfDay(date, fixedTime) {
   return date;
 }
 
-// 기본 배치 "spread" — 하루에 perDay개, 슬롯 사이 최소 minGapHours 시간, 시각은 슬롯 안에서 무작위.
+// 기본 배치 "spread" — 한국 시간 기준 08:00 → 13:00 → 16:00 → 21:00 순환.
 //
-// 2026-09-21 실측: 기본이 '지금 시각' 이라 3개가 00:13·00:14·00:14 로 붙어 나왔다 (진현님: "따닥따닥").
-// 슬롯 = 08:00(KST) + k × (최소간격+1)시간 + 0~60분 무작위 → 이웃 글 사이가 항상 최소간격 이상 벌어진다.
-// 오늘 이미 지나간 슬롯은 건너뛴다(지금+10분보다 앞이면 예약이 안 걸림). 날짜는 KST 기준.
+// 네 번째 글 다음에는 다음 날 08:00 으로 넘어간다. 오늘 이미 지난 슬롯은 건너뛰고,
+// 워드프레스에 이미 같은 시간대의 글이 있으면 다음 슬롯을 사용한다.
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-function spreadDate(index, {perDay = 3, minGapHours = 3, startDate = null, 피할시각들 = []} = {}) {
-  const per = Math.max(1, Math.floor(perDay));
-  const gapMs = (Math.max(1, minGapHours) + 1) * 60 * 60 * 1000;
+const PUBLISH_HOURS_KST = [8, 13, 16, 21];
+function spreadDate(index, {startDate = null, 피할시각들 = []} = {}) {
   const now = Date.now();
   const 최소 = now + 10 * 60 * 1000;
-  // 기준 날(KST 자정, UTC 로는 전날 15:00)
-  const kstNow = new Date((startDate ? startDate.getTime() : now) + KST_OFFSET_MS);
-  const dayStartUtc = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - KST_OFFSET_MS;
-  const slotStart = (day, k) => dayStartUtc + day * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000 + k * gapMs;
-  // 오늘 이미 지난 슬롯 수만큼 앞으로 민다 (startDate 를 미래로 준 경우엔 0)
-  let skipped = 0;
-  for (let k = 0; k < per; k += 1) if (slotStart(0, k) < 최소) skipped += 1;
-  // 워드프레스에 이미 잡혀 있는 시각(예약·임시글)과 최소 간격 안에 드는 슬롯은 건너뛴다.
-  // 그래서 수강생 폴더 기록이 없어도, 글을 1개씩 따로 만들어도 하루 3개·3시간 간격이 지켜진다 (2026-09-21 실측: 10개가 전부 12시대에 몰림).
-  const 간격ms = Math.max(1, minGapHours) * 60 * 60 * 1000;
-  const 겹침 = (t) => 피할시각들.some((x) => Math.abs(x - t) < 간격ms);
-  let i = index + skipped;
+  const kstBase = new Date((startDate ? startDate.getTime() : now) + KST_OFFSET_MS);
+  const dayStartUtc = Date.UTC(kstBase.getUTCFullYear(), kstBase.getUTCMonth(), kstBase.getUTCDate()) - KST_OFFSET_MS;
+  const slotStart = (position) => {
+    const day = Math.floor(position / PUBLISH_HOURS_KST.length);
+    const hour = PUBLISH_HOURS_KST[position % PUBLISH_HOURS_KST.length];
+    return dayStartUtc + day * 24 * 60 * 60 * 1000 + hour * 60 * 60 * 1000;
+  };
+  // 한 시간 안에 이미 잡힌 글이 있으면 같은 슬롯으로 보아 건너뛴다.
+  const 겹침범위 = 60 * 60 * 1000;
+  const 겹침 = (t) => 피할시각들.some((x) => Math.abs(x - t) < 겹침범위);
+  let position = Math.max(0, Math.floor(index));
   for (let 시도 = 0; 시도 < 400; 시도 += 1) {
-    const day = Math.floor(i / per);
-    const k = i % per;
-    const t = slotStart(day, k);
-    if (!겹침(t) && !겹침(t + 59 * 60 * 1000)) {
-      const jitter = Math.floor(Math.random() * 60) * 60 * 1000; // 0~59분
-      return new Date(t + jitter).toISOString();
-    }
-    i += 1;
+    const t = slotStart(position);
+    if (t >= 최소 && !겹침(t)) return new Date(t).toISOString();
+    position += 1;
   }
-  return new Date(slotStart(Math.floor(i / per), i % per)).toISOString();
+  return new Date(slotStart(position)).toISOString();
 }
 
 function postDateForIndex(index, mode, startDate, {randomDays = 30, fixedTime = "", stepDays = 1, hourGap = 0, perDay = 3, minGapHours = 3, 피할시각들 = []} = {}) {
   // 날짜를 아예 보내지 않으면 워드프레스가 지금 시각으로 저장한다 (--date-mode=now 로만).
   if (mode === "now" || mode === "none") return null;
-  // 기본값: 하루 3개, 최소 3시간 간격, 시각 무작위, 이미 잡힌 시각은 피함
-  if (mode === "spread") return spreadDate(index, {perDay, minGapHours, startDate: startDate && startDate.getTime() > Date.now() ? startDate : null, 피할시각들});
+  // 기본값: 하루 네 슬롯(08:00, 13:00, 16:00, 21:00)을 순서대로 사용한다.
+  if (mode === "spread") return spreadDate(index, {startDate: startDate && startDate.getTime() > Date.now() ? startDate : null, 피할시각들});
 
   // 시간 간격 모드 — 글마다 N시간씩 미룬다.
   //
@@ -1630,7 +1622,7 @@ const visibleOutputDir = join(
 // 예전 기본값은 past-daily(30일 전부터 하루 1개)였는데, 아무도 그렇게 설정한 적이
 // 없는데 갑자기 한 달 전 날짜가 찍혀 나와 혼란스러웠다.
 const dateMode = argValue("date-mode", "spread"); // 기본: 하루 3개 · 최소 3시간 간격 · 무작위 시각 (예전 기본 now 는 --date-mode=now)
-const perDay = Math.max(1, Number(argValue("per-day", "3")) || 3);
+const perDay = Math.max(1, Number(argValue("per-day", "4")) || 4);
 const minGapHours = Math.max(1, Number(argValue("min-gap-hours", "3")) || 3);
 const randomDays = Number(argValue("random-days", "30")) || 30;
 // 시간은 기본적으로 무작위다. 굳이 고정하려면 --fixed-time=18:00 처럼 붙인다.
@@ -1734,11 +1726,11 @@ if (titleCatalog.warnings.length > 0) {
 console.log(`워드프레스 카테고리 ${wordpressCategories.length}개 확인 / 글마다 제목에 맞춰 자동 선택`);
 console.log("본문 전체는 화면에 출력하지 않고, 워드프레스 임시글과 outputs 폴더에만 저장함.");
 if (dateMode === "spread") {
-  console.log(`임시글 날짜: 하루 ${perDay}개 · 최소 ${minGapHours}시간 간격 · 시각 무작위 (오늘 지난 시간대는 건너뜀) — 발행을 누르면 그 시각에 예약 공개됩니다`);
+  console.log("임시글 날짜: 08:00 → 13:00 → 16:00 → 21:00 순환 (다섯 번째는 다음 날 08:00) — 발행을 누르면 그 시각에 예약 공개됩니다");
 }
 if (dateMode === "random") {
   console.log(`임시글 날짜: 최근 ${randomDays}일 안에서 무작위${fixedTime ? ` / 시각 ${fixedTime} 고정` : " (시간도 무작위)"}`);
-} else if (dateMode !== "now" && dateMode !== "none") {
+} else if (dateMode !== "spread" && dateMode !== "now" && dateMode !== "none") {
   const gap = stepDays === 0 ? "같은 날에 모두" : stepDays === 1 ? "하루씩" : `${stepDays}일씩`;
   console.log(
     `임시글 날짜: ${dateOnly(startDate)} 부터 ${gap}` +
