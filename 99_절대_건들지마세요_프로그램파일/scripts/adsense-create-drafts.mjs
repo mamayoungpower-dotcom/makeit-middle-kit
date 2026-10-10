@@ -387,6 +387,7 @@ function compactDraftHistoryEntry(item) {
     postId: Number(item.postId || 0),
     status: item.status || "draft",
     date: item.date || "",
+    schedule: item.schedule || "",
     slug: normalizeSpaces(item.slug || ""),
     categoryId: Number(item.categoryId || 0),
     parentCategoryId: Number(item.parentCategoryId || 0),
@@ -480,29 +481,34 @@ function spreadDate(index, {startDate = null, 순환기록시각들 = []} = {}) 
   const 고정슬롯 = (t) => {
     if (!Number.isFinite(t)) return false;
     const kst = new Date(t + KST_OFFSET_MS);
-    return kst.getUTCMinutes() === 0 && kst.getUTCSeconds() === 0 && PUBLISH_HOURS_KST.includes(kst.getUTCHours());
+    return PUBLISH_HOURS_KST.includes(kst.getUTCHours());
   };
-  const 다음슬롯 = (t) => {
+  const 다음슬롯기준 = (t) => {
     const kst = new Date(t + KST_OFFSET_MS);
-    const hour = kst.getUTCHours();
-    const slotIndex = PUBLISH_HOURS_KST.indexOf(hour);
+    const slotIndex = PUBLISH_HOURS_KST.indexOf(kst.getUTCHours());
     const nextIndex = (slotIndex + 1) % PUBLISH_HOURS_KST.length;
     const dayAdd = nextIndex === 0 ? 1 : 0;
     return Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate() + dayAdd, PUBLISH_HOURS_KST[nextIndex] - 9, 0, 0, 0);
   };
-  const 기록 = 순환기록시각들.filter(고정슬롯).sort((a, b) => a - b);
+  const 무작위분 = () => 1 + Math.floor(Math.random() * 59);
+  const 분붙이기 = (t) => t + 무작위분() * 60 * 1000;
+  const 기록 = 순환기록시각들.filter(고정슬롯).sort((x, y) => x - y);
   if (기록.length) {
-    let t = 다음슬롯(기록[기록.length - 1]);
-    while (t < 최소) t = 다음슬롯(t);
-    return new Date(t).toISOString();
+    let 기준 = 다음슬롯기준(기록[기록.length - 1]);
+    let 후보 = 분붙이기(기준);
+    while (후보 < 최소) {
+      기준 = 다음슬롯기준(기준);
+      후보 = 분붙이기(기준);
+    }
+    return new Date(후보).toISOString();
   }
   let position = Math.max(0, Math.floor(index));
   for (let 시도 = 0; 시도 < 400; 시도 += 1) {
-    const t = slotStart(position);
-    if (t >= 최소) return new Date(t).toISOString();
+    const 후보 = 분붙이기(slotStart(position));
+    if (후보 >= 최소) return new Date(후보).toISOString();
     position += 1;
   }
-  return new Date(slotStart(position)).toISOString();
+  return new Date(분붙이기(slotStart(position))).toISOString();
 }
 
 function postDateForIndex(index, mode, startDate, {randomDays = 30, fixedTime = "", stepDays = 1, hourGap = 0, perDay = 3, minGapHours = 3, 피할시각들 = [], 순환기록시각들 = []} = {}) {
@@ -1743,7 +1749,7 @@ if (titleCatalog.warnings.length > 0) {
 console.log(`워드프레스 카테고리 ${wordpressCategories.length}개 확인 / 글마다 제목에 맞춰 자동 선택`);
 console.log("본문 전체는 화면에 출력하지 않고, 워드프레스 임시글과 outputs 폴더에만 저장함.");
 if (dateMode === "spread") {
-  console.log("임시글 날짜: 08:00 → 13:00 → 16:00 → 21:00 순환 (다섯 번째는 다음 날 08:00) — 발행을 누르면 그 시각에 예약 공개됩니다");
+  console.log("임시글 날짜: 08시대 → 13시대 → 16시대 → 21시대 순환, 분은 01~59분 무작위 (다섯 번째는 다음 날 08시대) — 발행을 누르면 그 시각에 예약 공개됩니다");
 }
 if (dateMode === "random") {
   console.log(`임시글 날짜: 최근 ${randomDays}일 안에서 무작위${fixedTime ? ` / 시각 ${fixedTime} 고정` : " (시간도 무작위)"}`);
@@ -1775,7 +1781,16 @@ console.log("");
 const 이번실행 = {글수: 0, krw: 0, usd: 0, total_tokens: 0};
 
 const 잡힌시각들 = Array.isArray(existingOnWordPress.dates) ? [...existingOnWordPress.dates] : [];
-const 순환기록시각들 = previousDraftHistory.map((entry) => Date.parse(entry.date || "")).filter(Number.isFinite);
+const 순환기록시각들 = previousDraftHistory
+  .filter((entry) => {
+    const t = Date.parse(entry.date || "");
+    if (!Number.isFinite(t)) return false;
+    if (entry.schedule === "four-slot-rotation") return true;
+    // 무작위 분 적용 전 판에서 만든 00분 글도 순환 기록으로 이어 받는다.
+    const kst = new Date(t + KST_OFFSET_MS);
+    return kst.getUTCMinutes() === 0 && PUBLISH_HOURS_KST.includes(kst.getUTCHours());
+  })
+  .map((entry) => Date.parse(entry.date));
 // 랭크매스 포커스 키워드 = 제목 파일의 대주제 (제목 대부분에 공통으로 든 문구). 없으면 글마다 OpenAI 가 고른 키워드를 쓴다.
 const 대주제 = argValue("focus-keyword", "") || 대주제키워드(allTitleEntries.map((e) => e.title));
 if (대주제) console.log(`포커스 키워드(대주제): ${대주제}`);
