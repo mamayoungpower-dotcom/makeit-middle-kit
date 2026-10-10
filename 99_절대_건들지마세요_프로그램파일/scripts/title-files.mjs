@@ -436,6 +436,46 @@ export function readTitleEntries(filePath) {
   };
 }
 
+
+/**
+ * 아직 쓰지 않은 제목을 세부카테고리별로 한 개씩 순환 배치한다.
+ *
+ * 제목 파일이 A 세부카테고리의 제목을 모두 적은 뒤 B 세부카테고리를 적는 형식이어도
+ * A1 → B1 → C1 → A2 → B2 → C2 순서로 고른다. 구조화된 카테고리 정보가 없는
+ * 일반 제목은 카테고리 순환이 끝난 뒤 원래 순서대로 둔다.
+ */
+export function orderTitleEntriesBySubcategoryRoundRobin(entries) {
+  const source = Array.isArray(entries) ? entries : [];
+  const groups = new Map();
+  const loose = [];
+
+  for (const entry of source) {
+    const parentNumber = Number(entry?.parentCategoryNumber || 0);
+    const childNumber = Number(entry?.childCategoryNumber || 0);
+    if (!(parentNumber > 0 && childNumber > 0)) {
+      loose.push(entry);
+      continue;
+    }
+
+    const key = String(parentNumber) + ":" + String(childNumber);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  }
+
+  if (groups.size === 0) return source.slice();
+
+  const queues = [...groups.values()];
+  const rounds = Math.max(...queues.map((queue) => queue.length));
+  const ordered = [];
+  for (let index = 0; index < rounds; index += 1) {
+    for (const queue of queues) {
+      if (queue[index]) ordered.push(queue[index]);
+    }
+  }
+
+  return [...ordered, ...loose];
+}
+
 export function listTitleFileCandidates(projectRoot, siteNumber) {
   const dir = titleDir(projectRoot);
   if (!existsSync(dir)) return [];
