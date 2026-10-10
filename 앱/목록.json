@@ -1,8 +1,8 @@
 {
-  "버전": "2026-10-10-subcategory",
+  "버전": "2026-10-10-subcategory-r2",
   "정지": false,
   "정지안내": "",
-  "커밋": "0c6a0f841bf73adbe356fc6d2d9a11646af73c74",
+  "커밋": "fc3f3c8b1d1a36e3139fae26f45289db1fbb2a29",
   "파일": [
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-auto-drafts.mjs",
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-create-drafts.mjs",
