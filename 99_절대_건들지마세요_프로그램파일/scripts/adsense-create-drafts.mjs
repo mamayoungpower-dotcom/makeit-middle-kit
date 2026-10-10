@@ -1787,9 +1787,10 @@ const 순환기록시각들 = previousDraftHistory
     const t = Date.parse(entry.date || "");
     if (!Number.isFinite(t)) return false;
     if (entry.schedule === "four-slot-rotation") return true;
-    // 무작위 분 적용 전 판에서 만든 00분 글도 순환 기록으로 이어 받는다.
+    // 예전 판은 schedule 표식을 저장하지 않았다. 08·13·16·21시대의 기록은
+    // 분이 무작위여도 순환 기록으로 이어 받아 다음 시간대를 사용한다.
     const kst = new Date(t + KST_OFFSET_MS);
-    return kst.getUTCMinutes() === 0 && PUBLISH_HOURS_KST.includes(kst.getUTCHours());
+    return PUBLISH_HOURS_KST.includes(kst.getUTCHours());
   })
   .map((entry) => Date.parse(entry.date));
 // 랭크매스 포커스 키워드 = 제목 파일의 대주제 (제목 대부분에 공통으로 든 문구). 없으면 글마다 OpenAI 가 고른 키워드를 쓴다.
@@ -1914,6 +1915,7 @@ for (let index = 0; index < titles.length; index += 1) {
       ok: true,
       postId: post.id,
       date: post.date || postDate,
+      schedule: dateMode === "spread" ? "four-slot-rotation" : "",
       status: "draft",
       slug: post.slug || meta.slug,
       focusKeyword: meta.focusKeyword,
