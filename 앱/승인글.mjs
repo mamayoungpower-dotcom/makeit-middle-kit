@@ -15,7 +15,7 @@ import {fileURLToPath} from "node:url";
 import {Worker} from "node:worker_threads";
 import {homedir} from "node:os";
 
-export const 버전 = "2026-10-10-subcategory";
+export const 버전 = "2026-10-10-subcategory-time-rotation-r2";
 
 const 여기 = dirname(fileURLToPath(import.meta.url));            // <임시>/앱
 const 프로그램폴더 = join(여기, "..", "99_절대_건들지마세요_프로그램파일");
@@ -554,6 +554,36 @@ export async function 날짜재배치({작업폴더, 사이트 = 1, 하루개수
     바뀜.push({제목, 발행날짜: kst, 됨: r.ok});
   }
   return {결과: "됨", 재배치: 바뀜.length, 글: 바뀜};
+}
+
+export async function 임시글날짜수정({작업폴더, 사이트 = 1, 글ID, 발행날짜}) {
+  const 설정 = await 설정읽기(작업폴더);
+  const s = (설정.사이트 || []).find((x) => Number(x.번호) === Number(사이트));
+  if (!s) return {결과: "설정 필요", 빠진: [`사이트${사이트} 워드프레스 정보`]};
+  const m = String(발행날짜 || "").match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
+  if (!m || !(Number(글ID) > 0)) return {결과: "실패", 이유: "글 번호 또는 날짜가 올바르지 않음"};
+  const utc = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]) - 9, Number(m[5]), 0));
+  const {wpFetch} = await import(`file://${스크립트("lib/wp.mjs")}`);
+  const base = 주소정리(s.주소);
+  const cred = Buffer.from(`${s.아이디}:${s.앱비밀번호}`).toString("base64");
+  const headers = {Authorization: `Basic ${cred}`, Accept: "application/json", "Content-Type": "application/json"};
+  const dateGmt = utc.toISOString().replace(/\.\d{3}Z$/, "");
+  const response = await wpFetch(`${base}/wp-json/wp/v2/posts/${Number(글ID)}`, {
+    method: "POST", headers, body: JSON.stringify({date_gmt: dateGmt, status: "draft"}),
+  });
+  if (!response.ok) return {결과: "실패", 이유: `워드프레스 응답 ${response.status}`};
+  const siteDir = join(결과폴더(작업폴더), `site-${String(사이트).padStart(2, "0")}`);
+  for (const name of ["last-run.json", "draft-history.json"]) {
+    const file = join(siteDir, name);
+    try {
+      const rows = JSON.parse(await readFile(file, "utf8"));
+      if (!Array.isArray(rows)) continue;
+      let changed = false;
+      for (const row of rows) if (Number(row?.postId) === Number(글ID)) { row.date = utc.toISOString(); changed = true; }
+      if (changed) await writeFile(file, JSON.stringify(rows, null, 2) + "\n", "utf8");
+    } catch {}
+  }
+  return {결과: "됨", 발행날짜: String(발행날짜)};
 }
 
 // 진단 — 설정 상태 + 사이트 연결 + 지금까지 만든 글·쓴 돈
