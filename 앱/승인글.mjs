@@ -467,17 +467,8 @@ async function 글만들기본체({작업폴더, 사이트 = 1, 개수 = 1, 날�
   if (무작위일수) argv.push(`--random-days=${무작위일수}`);
   if (시간간격) argv.push(`--hour-gap=${시간간격}`);
   if (날짜모드 && 날짜모드 !== "now" && 날짜모드 !== "spread") argv.push(`--date-offset=${앞상태.만든수}`); // 글 1개씩 불러도 날짜 순번이 이어지게
-  if (!날짜모드 || 날짜모드 === "spread") {
-    // 기본(spread): 오늘 이 사이트에서 이미 만든 글 수만큼 슬롯을 건너뛴다 — 1개씩 불러도 하루 3개·최소 3시간 간격이 유지된다
-    let 오늘만든 = 0;
-    try {
-      const {원장읽기} = await import(`file://${스크립트("lib/usage.mjs")}`);
-      const 원장 = 원장읽기(join(결과폴더(작업폴더), "사용량.json"));
-      const kst = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-      오늘만든 = 원장.글.filter((g) => Number(g.site) === Number(사이트) && new Date(new Date(g.때).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10) === kst).length;
-    } catch {}
-    if (오늘만든 > 0) argv.push(`--date-offset=${오늘만든}`);
-  }
+  // 기본(spread)은 워드프레스에 이미 잡힌 시간을 확인해 다음 08·13·16·21시 슬롯을 고른다.
+  // 실행 횟수로 따로 건너뛰면 이미 잡힌 슬롯과 이중으로 계산되므로 date-offset을 붙이지 않는다.
   const r = await 실행({작업폴더, 스크립트이름: "adsense-create-drafts.mjs", argv});
 
   const 줄 = r.출력.split("\n");
