@@ -386,6 +386,7 @@ function compactDraftHistoryEntry(item) {
     title: normalizeSpaces(item.title),
     postId: Number(item.postId || 0),
     status: item.status || "draft",
+    date: item.date || "",
     slug: normalizeSpaces(item.slug || ""),
     categoryId: Number(item.categoryId || 0),
     parentCategoryId: Number(item.parentCategoryId || 0),
@@ -466,7 +467,7 @@ function applyTimeOfDay(date, fixedTime) {
 // 워드프레스에 이미 같은 시간대의 글이 있으면 다음 슬롯을 사용한다.
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const PUBLISH_HOURS_KST = [8, 13, 16, 21];
-function spreadDate(index, {startDate = null, 피할시각들 = []} = {}) {
+function spreadDate(index, {startDate = null, 순환기록시각들 = []} = {}) {
   const now = Date.now();
   const 최소 = now + 10 * 60 * 1000;
   const kstBase = new Date((startDate ? startDate.getTime() : now) + KST_OFFSET_MS);
@@ -476,23 +477,39 @@ function spreadDate(index, {startDate = null, 피할시각들 = []} = {}) {
     const hour = PUBLISH_HOURS_KST[position % PUBLISH_HOURS_KST.length];
     return dayStartUtc + day * 24 * 60 * 60 * 1000 + hour * 60 * 60 * 1000;
   };
-  // 한 시간 안에 이미 잡힌 글이 있으면 같은 슬롯으로 보아 건너뛴다.
-  const 겹침범위 = 60 * 60 * 1000;
-  const 겹침 = (t) => 피할시각들.some((x) => Math.abs(x - t) < 겹침범위);
+  const 고정슬롯 = (t) => {
+    if (!Number.isFinite(t)) return false;
+    const kst = new Date(t + KST_OFFSET_MS);
+    return kst.getUTCMinutes() === 0 && kst.getUTCSeconds() === 0 && PUBLISH_HOURS_KST.includes(kst.getUTCHours());
+  };
+  const 다음슬롯 = (t) => {
+    const kst = new Date(t + KST_OFFSET_MS);
+    const hour = kst.getUTCHours();
+    const slotIndex = PUBLISH_HOURS_KST.indexOf(hour);
+    const nextIndex = (slotIndex + 1) % PUBLISH_HOURS_KST.length;
+    const dayAdd = nextIndex === 0 ? 1 : 0;
+    return Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate() + dayAdd, PUBLISH_HOURS_KST[nextIndex] - 9, 0, 0, 0);
+  };
+  const 기록 = 순환기록시각들.filter(고정슬롯).sort((a, b) => a - b);
+  if (기록.length) {
+    let t = 다음슬롯(기록[기록.length - 1]);
+    while (t < 최소) t = 다음슬롯(t);
+    return new Date(t).toISOString();
+  }
   let position = Math.max(0, Math.floor(index));
   for (let 시도 = 0; 시도 < 400; 시도 += 1) {
     const t = slotStart(position);
-    if (t >= 최소 && !겹침(t)) return new Date(t).toISOString();
+    if (t >= 최소) return new Date(t).toISOString();
     position += 1;
   }
   return new Date(slotStart(position)).toISOString();
 }
 
-function postDateForIndex(index, mode, startDate, {randomDays = 30, fixedTime = "", stepDays = 1, hourGap = 0, perDay = 3, minGapHours = 3, 피할시각들 = []} = {}) {
+function postDateForIndex(index, mode, startDate, {randomDays = 30, fixedTime = "", stepDays = 1, hourGap = 0, perDay = 3, minGapHours = 3, 피할시각들 = [], 순환기록시각들 = []} = {}) {
   // 날짜를 아예 보내지 않으면 워드프레스가 지금 시각으로 저장한다 (--date-mode=now 로만).
   if (mode === "now" || mode === "none") return null;
   // 기본값: 하루 네 슬롯(08:00, 13:00, 16:00, 21:00)을 순서대로 사용한다.
-  if (mode === "spread") return spreadDate(index, {startDate: startDate && startDate.getTime() > Date.now() ? startDate : null, 피할시각들});
+  if (mode === "spread") return spreadDate(index, {startDate: startDate && startDate.getTime() > Date.now() ? startDate : null, 순환기록시각들});
 
   // 시간 간격 모드 — 글마다 N시간씩 미룬다.
   //
@@ -1758,6 +1775,7 @@ console.log("");
 const 이번실행 = {글수: 0, krw: 0, usd: 0, total_tokens: 0};
 
 const 잡힌시각들 = Array.isArray(existingOnWordPress.dates) ? [...existingOnWordPress.dates] : [];
+const 순환기록시각들 = previousDraftHistory.map((entry) => Date.parse(entry.date || "")).filter(Number.isFinite);
 // 랭크매스 포커스 키워드 = 제목 파일의 대주제 (제목 대부분에 공통으로 든 문구). 없으면 글마다 OpenAI 가 고른 키워드를 쓴다.
 const 대주제 = argValue("focus-keyword", "") || 대주제키워드(allTitleEntries.map((e) => e.title));
 if (대주제) console.log(`포커스 키워드(대주제): ${대주제}`);
@@ -1851,8 +1869,11 @@ for (let index = 0; index < titles.length; index += 1) {
     writeFileSync(localPath, htmlWithImage, "utf8");
     writeFileSync(visiblePath, htmlWithImage, "utf8");
 
-    const postDate = postDateForIndex(index + dateOffset, dateMode, startDate, {randomDays, fixedTime, stepDays, hourGap, perDay, minGapHours, 피할시각들: 잡힌시각들});
-    if (postDate) 잡힌시각들.push(Date.parse(postDate)); // 이번 실행에서 잡은 시각도 다음 글이 피하게
+    const postDate = postDateForIndex(index + dateOffset, dateMode, startDate, {randomDays, fixedTime, stepDays, hourGap, perDay, minGapHours, 피할시각들: 잡힌시각들, 순환기록시각들});
+    if (postDate) {
+      잡힌시각들.push(Date.parse(postDate));
+      순환기록시각들.push(Date.parse(postDate));
+    } // 이번 실행에서 잡은 시각도 다음 글이 피하게
     let post = await createDraftPost({siteUrl, username, appPassword, title, html: htmlWithImage, date: postDate, meta, featuredMediaId: featuredMedia.id, selectedCategory});
     if (!postHasInlineImage(post, featuredMedia)) {
       post = await updateDraftPostContent({siteUrl, username, appPassword, postId: post.id, html: htmlWithImage, featuredMediaId: featuredMedia.id, selectedCategory});
