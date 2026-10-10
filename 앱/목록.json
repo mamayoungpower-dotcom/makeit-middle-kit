@@ -1,8 +1,8 @@
 {
-  "버전": "2026-10-10-subcategory-time-random-minute",
+  "버전": "2026-10-11-terra",
   "정지": false,
   "정지안내": "",
-  "커밋": "4b9e301cb694f21a9f878990f3ec6ed76c4d8b23",
+  "커밋": "6118b47b100545c78b3c1ed194763458b42f9da2",
   "파일": [
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-auto-drafts.mjs",
     "99_절대_건들지마세요_프로그램파일/scripts/adsense-create-drafts.mjs",
