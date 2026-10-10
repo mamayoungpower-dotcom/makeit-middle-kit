@@ -561,6 +561,7 @@ function extractUsage(data) {
 // 계산했다. 모델을 바꾸면 화면의 "약 N원"이 조용히 틀린 값이 된다.
 const MODEL_PRICE_PER_1M = {
   "gpt-5.4-mini": {input: GPT54_MINI_INPUT_PER_1M, output: GPT54_MINI_OUTPUT_PER_1M},
+  "gpt-5.6-terra": {input: 2, output: 12},
 };
 
 function estimateCost({model, inputTokens, outputTokens, usdKrw}) {
