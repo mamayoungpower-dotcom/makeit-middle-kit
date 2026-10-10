@@ -1686,10 +1686,12 @@ const usedTitleKeys = new Set([
   ...previousDraftHistory.map((entry) => titleKey(entry.title)),
   ...existingOnWordPress.titles.map((title) => titleKey(title)),
 ]);
-const availableTitleEntriesInFileOrder = includeUsedTitles
-  ? allTitleEntries
-  : allTitleEntries.filter((entry) => !usedTitleKeys.has(titleKey(entry.title)));
-const availableTitleEntries = orderTitleEntriesBySubcategoryRoundRobin(availableTitleEntriesInFileOrder);
+// 전체 제목을 먼저 세부카테고리 순환 순서로 세운 뒤 사용한 제목을 뺀다.
+// 반대로 먼저 뺀 뒤 다시 순환시키면 앱이 글을 1개씩 만들 때마다 첫 카테고리로 되돌아간다.
+const orderedTitleEntries = orderTitleEntriesBySubcategoryRoundRobin(allTitleEntries);
+const availableTitleEntries = includeUsedTitles
+  ? orderedTitleEntries
+  : orderedTitleEntries.filter((entry) => !usedTitleKeys.has(titleKey(entry.title)));
 const titleEntries = limit > 0 ? availableTitleEntries.slice(0, limit) : availableTitleEntries;
 const titles = titleEntries.map((entry) => entry.title);
 if (titles.length === 0) {
